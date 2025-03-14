@@ -1,0 +1,62 @@
+services:
+  apache:
+    build:
+      context: ./.docker/apache
+      dockerfile: Dockerfile
+    ports:
+      - '${APP_PORT:-80}:80'
+    volumes:
+      - ./:/var/www/html
+      - ./.docker/apache/vhost.conf:/etc/apache2/apache2.conf
+    depends_on:
+      - php
+    networks:
+      - app-networks
+
+  php:
+    build:
+      context: ./.docker/php
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - app-networks
+
+  cache:
+    image: redis:7.4.0-alpine
+    ports:
+      - '${APP_REDIS_PORT:-16379}:6379'
+    networks:
+      - app-networks
+
+  queue:
+    build:
+      context: ./.docker/php
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+    command: php artisan horizon
+    networks:
+      - app-networks
+
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rigging}
+      MYSQL_USER: ${MYSQL_USER:-php}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+    volumes:
+      - mysqldata:/var/lib/mysql
+      - ./.docker/db/my.cnf:/etc/mysql/conf.d/my.cnf
+    ports:
+      - '${APP_DB_PORT:-13306}:3306'
+    networks:
+      - app-networks
+
+volumes:
+  mysqldata:
+
+networks:
+  app-networks:
+    driver: bridge

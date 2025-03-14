@@ -1,0 +1,90 @@
+#!/bin/bash
+# https://github.com/adriancooney/Taskfile#install
+
+# コンテナ起動
+function up {
+  docker compose up -d
+}
+
+# コンテナ終了
+function down {
+  docker compose down
+}
+
+# コンテナ再起動
+function restart {
+  docker compose restart
+}
+
+# apache コンテナ内でのコマンド起動
+function exec {
+  docker compose exec php "$@"
+}
+
+# web コンテナの bash に入る
+function bash {
+  exec bash
+}
+
+# web コンテナの PHP を実行
+function php {
+  exec /usr/local/bin/php "$@"
+}
+
+# web コンテナで artisan コマンドを実行
+function artisan {
+  exec /usr/local/bin/php artisan "$@"
+}
+
+# web コンテナで composer コマンドを実行
+function composer {
+  exec /usr/bin/composer "$@"
+}
+
+# web コンテナで PHPUnit を実行
+function test {
+  exec vendor/bin/pest "$@"
+}
+
+# web コンテナで tinker に入る
+function tinker {
+  artisan tinker
+}
+
+# Lint チェックと PHPUnit を実行
+function check {
+  pnpm run lint && exec composer lint && exec composer test
+}
+
+# web コンテナで queue を listen
+function queue {
+  exec php artisan queue:listen --timeout=0
+}
+
+# Laravel Log を出力
+function log {
+  tail "$@" storage/logs/laravel.log
+}
+
+# ngrok を起動
+function share {
+  if [ "$1" = "stop" ]; then
+    docker compose stop ngrok
+  else
+    docker compose up -d ngrok
+    open http://localhost:4040
+  fi
+}
+
+function default {
+  help
+}
+
+function help {
+    echo "$0 <task> <args>"
+    echo "Tasks:"
+    compgen -A function | cat -n
+}
+
+TIMEFORMAT="Task completed in %3lR"
+time ${@:-default}
